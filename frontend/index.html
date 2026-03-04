@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ContentCalendar</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --surface: #16161a;
+    --surface2: #1e1e24;
+    --border: #2a2a35;
+    --accent: #c8f135;
+    --accent2: #7c6af7;
+    --accent3: #f76a6a;
+    --accent4: #6af7d4;
+    --text: #f0f0f5;
+    --text2: #9090a8;
+    --instagram: #e1306c;
+    --twitter: #1d9bf0;
+    --linkedin: #0a66c2;
+    --col-to-write: #c8f135;
+    --col-draft: #f7c26a;
+    --col-ready: #7c6af7;
+    --col-posted: #6af7d4;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 40px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--accent); }
+
+  .header-actions { display: flex; gap: 12px; align-items: center; }
+
+  .filter-btns { display: flex; gap: 6px; }
+  .filter-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .filter-btn:hover, .filter-btn.active {
+    background: var(--surface2);
+    color: var(--text);
+    border-color: var(--text2);
+  }
+  .filter-btn.ig.active { border-color: var(--instagram); color: var(--instagram); }
+  .filter-btn.tw.active { border-color: var(--twitter); color: var(--twitter); }
+  .filter-btn.li.active { border-color: var(--linkedin); color: var(--linkedin); }
+
+  .btn-new {
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: #0d0d0f;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: transform 0.15s, opacity 0.15s;
+  }
+  .btn-new:hover { opacity: 0.88; transform: translateY(-1px); }
+
+  /* ── KANBAN ── */
+  .board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    padding: 32px 40px;
+    min-height: calc(100vh - 80px);
+  }
+
+  .column {
+    background: var(--surface);
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    min-height: 500px;
+  }
+
+  .col-header {
+    padding: 18px 20px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .col-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  [data-col="to_write"] .col-dot { background: var(--col-to-write); }
+  [data-col="draft"] .col-dot { background: var(--col-draft); }
+  [data-col="ready"] .col-dot { background: var(--col-ready); }
+  [data-col="posted"] .col-dot { background: var(--col-posted); }
+
+  .col-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .col-count {
+    margin-left: auto;
+    background: var(--surface2);
+    color: var(--text2);
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+  }
+
+  .col-cards {
+    flex: 1;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* ── POST CARD ── */
+  .card {
+    background: var(--surface2);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    padding: 14px;
+    cursor: grab;
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    animation: cardIn 0.25s ease;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    border-color: var(--text2);
+  }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .card.dragging { opacity: 0.4; transform: scale(0.97); }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 1.3;
+    flex: 1;
+  }
+
+  .platform-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    font-family: 'Syne', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .badge-instagram { background: rgba(225,48,108,0.15); color: var(--instagram); }
+  .badge-twitter   { background: rgba(29,155,240,0.15); color: var(--twitter); }
+  .badge-linkedin  { background: rgba(10,102,194,0.15); color: var(--linkedin); }
+
+  .card-caption {
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.5;
+    margin-bottom: 10px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card-hashtags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 10px;
+  }
+  .hashtag {
+    font-size: 11px;
+    color: var(--accent2);
+    background: rgba(124,106,247,0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-date {
+    font-size: 11px;
+    color: var(--text2);
+  }
+
+  .card-actions { display: flex; gap: 6px; }
+  .card-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .card-btn:hover { color: var(--text); border-color: var(--text2); }
+  .card-btn.delete:hover { color: var(--accent3); border-color: var(--accent3); }
+
+  /* ── MODAL ── */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .overlay.open { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 500px;
+    padding: 28px;
+    transform: translateY(12px);
+    transition: transform 0.2s;
+  }
+  .overlay.open .modal { transform: translateY(0); }
+
+  .modal-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 20px;
+    margin-bottom: 22px;
+  }
+
+  .form-group { margin-bottom: 16px; }
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  input, textarea, select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: none;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent2); }
+  select option { background: var(--surface2); }
+
+  .hashtag-section { margin-bottom: 16px; }
+  .hashtag-row { display: flex; gap: 8px; }
+  .hashtag-row input { flex: 1; }
+  .btn-suggest {
+    padding: 10px 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--accent);
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .btn-suggest:hover { border-color: var(--accent); background: rgba(200,241,53,0.08); }
+
+  .hashtag-preview {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    min-height: 28px;
+  }
+  .htag-chip {
+    font-size: 12px;
+    color: var(--accent2);
+    background: rgba(124,106,247,0.12);
+    border: 1px solid rgba(124,106,247,0.2);
+    padding: 3px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .htag-chip:hover { background: rgba(124,106,247,0.25); }
+  .htag-chip.selected {
+    background: rgba(124,106,247,0.3);
+    border-color: var(--accent2);
+    color: var(--text);
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 22px;
+  }
+  .btn-cancel {
+    padding: 10px 20px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text2);
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-cancel:hover { border-color: var(--text2); color: var(--text); }
+  .btn-save {
+    padding: 10px 24px;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: #0d0d0f;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-save:hover { opacity: 0.88; }
+
+  /* ── DRAG OVER ── */
+  .column.drag-over { border-color: var(--accent2); background: rgba(124,106,247,0.06); }
+
+  /* ── EMPTY STATE ── */
+  .empty {
+    text-align: center;
+    padding: 30px 16px;
+    color: var(--text2);
+    font-size: 13px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    margin: 4px 0;
+  }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13px;
+    padding: 12px 20px;
+    border-radius: 10px;
+    z-index: 999;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.25s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { border-color: var(--accent); }
+
+  @media (max-width: 900px) {
+    .board { grid-template-columns: repeat(2, 1fr); padding: 20px; }
+    header { padding: 16px 20px; }
+  }
+  @media (max-width: 560px) {
+    .board { grid-template-columns: 1fr; }
+    .filter-btns { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Content<span>Cal</span></div>
+  <div class="header-actions">
+    <div class="filter-btns">
+      <button class="filter-btn active" data-platform="all">All</button>
+      <button class="filter-btn ig" data-platform="instagram">Instagram</button>
+      <button class="filter-btn tw" data-platform="twitter">Twitter</button>
+      <button class="filter-btn li" data-platform="linkedin">LinkedIn</button>
+    </div>
+    <button class="btn-new" id="btnNew">+ New Post</button>
+  </div>
+</header>
+
+<div class="board" id="board">
+  <div class="column" data-col="to_write">
+    <div class="col-header">
+      <div class="col-dot"></div>
+      <div class="col-title">To Write</div>
+      <div class="col-count">0</div>
+    </div>
+    <div class="col-cards" id="col-to_write"></div>
+  </div>
+  <div class="column" data-col="draft">
+    <div class="col-header">
+      <div class="col-dot"></div>
+      <div class="col-title">Draft</div>
+      <div class="col-count">0</div>
+    </div>
+    <div class="col-cards" id="col-draft"></div>
+  </div>
+  <div class="column" data-col="ready">
+    <div class="col-header">
+      <div class="col-dot"></div>
+      <div class="col-title">Ready</div>
+      <div class="col-count">0</div>
+    </div>
+    <div class="col-cards" id="col-ready"></div>
+  </div>
+  <div class="column" data-col="posted">
+    <div class="col-header">
+      <div class="col-dot"></div>
+      <div class="col-title">Posted</div>
+      <div class="col-count">0</div>
+    </div>
+    <div class="col-cards" id="col-posted"></div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">New Post</div>
+    <input type="hidden" id="editId"/>
+
+    <div class="form-group">
+      <label>Title</label>
+      <input type="text" id="fTitle" placeholder="e.g. Monday motivation post"/>
+    </div>
+
+    <div class="form-group">
+      <label>Caption</label>
+      <textarea id="fCaption" rows="3" placeholder="Write your caption here..."></textarea>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+      <div class="form-group">
+        <label>Platform</label>
+        <select id="fPlatform">
+          <option value="instagram">Instagram</option>
+          <option value="twitter">Twitter</option>
+          <option value="linkedin">LinkedIn</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="fStatus">
+          <option value="to_write">To Write</option>
+          <option value="draft">Draft</option>
+          <option value="ready">Ready</option>
+          <option value="posted">Posted</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Scheduled Date</label>
+      <input type="date" id="fDate"/>
+    </div>
+
+    <div class="hashtag-section">
+      <label>Hashtag Suggester</label>
+      <div class="hashtag-row">
+        <input type="text" id="fHashtagTopic" placeholder="Enter a topic (e.g. fitness, tech)"/>
+        <button class="btn-suggest" id="btnSuggest">✦ Suggest</button>
+      </div>
+      <div class="hashtag-preview" id="hashtagPreview"></div>
+    </div>
+
+    <div class="form-group">
+      <label>Selected Hashtags</label>
+      <input type="text" id="fHashtags" placeholder="Or type hashtags manually"/>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnCancel">Cancel</button>
+      <button class="btn-save" id="btnSave">Save Post</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = "http://localhost:5000/api";
+let allPosts = [];
+let dragId = null;
+let selectedHashtags = new Set();
+let currentPlatform = "all";
+
+// ── FETCH & RENDER ──────────────────────────────────────────────────────
+
+async function loadPosts() {
+  try {
+    const res = await fetch(`${API}/posts?platform=${currentPlatform}`);
+    allPosts = await res.json();
+    renderBoard();
+  } catch {
+    // Demo mode: use local state
+    renderBoard();
+  }
+}
+
+function renderBoard() {
+  const statuses = ["to_write", "draft", "ready", "posted"];
+  statuses.forEach(s => {
+    const el = document.getElementById(`col-${s}`);
+    const posts = allPosts.filter(p => p.status === s);
+    const col = el.closest(".column");
+    col.querySelector(".col-count").textContent = posts.length;
+
+    if (posts.length === 0) {
+      el.innerHTML = `<div class="empty">No posts here yet</div>`;
+      return;
+    }
+    el.innerHTML = posts.map(cardHTML).join("");
+    el.querySelectorAll(".card").forEach(addCardListeners);
+  });
+}
+
+function cardHTML(p) {
+  const tags = p.hashtags ? p.hashtags.split(" ").filter(Boolean).slice(0, 4) : [];
+  const tagHTML = tags.map(t => `<span class="hashtag">${t}</span>`).join("");
+  const dateStr = p.scheduled_date ? `📅 ${p.scheduled_date}` : "";
+  return `
+  <div class="card" draggable="true" data-id="${p.id}">
+    <div class="card-top">
+      <div class="card-title">${p.title}</div>
+      <span class="platform-badge badge-${p.platform}">${p.platform}</span>
+    </div>
+    ${p.caption ? `<div class="card-caption">${p.caption}</div>` : ""}
+    ${tagHTML ? `<div class="card-hashtags">${tagHTML}</div>` : ""}
+    <div class="card-footer">
+      <span class="card-date">${dateStr}</span>
+      <div class="card-actions">
+        <button class="card-btn edit-btn" data-id="${p.id}">Edit</button>
+        <button class="card-btn delete delete-btn" data-id="${p.id}">Delete</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function addCardListeners(card) {
+  card.addEventListener("dragstart", e => {
+    dragId = card.dataset.id;
+    setTimeout(() => card.classList.add("dragging"), 0);
+  });
+  card.addEventListener("dragend", () => card.classList.remove("dragging"));
+  card.querySelector(".edit-btn").addEventListener("click", () => openEdit(card.dataset.id));
+  card.querySelector(".delete-btn").addEventListener("click", () => deletePost(card.dataset.id));
+}
+
+// ── DRAG & DROP ────────────────────────────────────────────────────────
+
+document.querySelectorAll(".column").forEach(col => {
+  col.addEventListener("dragover", e => { e.preventDefault(); col.classList.add("drag-over"); });
+  col.addEventListener("dragleave", () => col.classList.remove("drag-over"));
+  col.addEventListener("drop", async () => {
+    col.classList.remove("drag-over");
+    const newStatus = col.dataset.col;
+    if (!dragId) return;
+    try {
+      await fetch(`${API}/posts/${dragId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus })
+      });
+    } catch {
+      const post = allPosts.find(p => p.id == dragId);
+      if (post) post.status = newStatus;
+    }
+    await loadPosts();
+    showToast("Post moved!", "success");
+    dragId = null;
+  });
+});
+
+// ── MODAL ──────────────────────────────────────────────────────────────
+
+function openNew() {
+  document.getElementById("modalTitle").textContent = "New Post";
+  document.getElementById("editId").value = "";
+  document.getElementById("fTitle").value = "";
+  document.getElementById("fCaption").value = "";
+  document.getElementById("fPlatform").value = "instagram";
+  document.getElementById("fStatus").value = "to_write";
+  document.getElementById("fDate").value = "";
+  document.getElementById("fHashtags").value = "";
+  document.getElementById("fHashtagTopic").value = "";
+  document.getElementById("hashtagPreview").innerHTML = "";
+  selectedHashtags.clear();
+  document.getElementById("overlay").classList.add("open");
+  document.getElementById("fTitle").focus();
+}
+
+function openEdit(id) {
+  const p = allPosts.find(x => x.id == id);
+  if (!p) return;
+  document.getElementById("modalTitle").textContent = "Edit Post";
+  document.getElementById("editId").value = p.id;
+  document.getElementById("fTitle").value = p.title;
+  document.getElementById("fCaption").value = p.caption || "";
+  document.getElementById("fPlatform").value = p.platform;
+  document.getElementById("fStatus").value = p.status;
+  document.getElementById("fDate").value = p.scheduled_date || "";
+  document.getElementById("fHashtags").value = p.hashtags || "";
+  document.getElementById("fHashtagTopic").value = "";
+  document.getElementById("hashtagPreview").innerHTML = "";
+  selectedHashtags = new Set((p.hashtags || "").split(" ").filter(Boolean));
+  document.getElementById("overlay").classList.add("open");
+}
+
+function closeModal() {
+  document.getElementById("overlay").classList.remove("open");
+}
+
+document.getElementById("btnNew").addEventListener("click", openNew);
+document.getElementById("btnCancel").addEventListener("click", closeModal);
+document.getElementById("overlay").addEventListener("click", e => {
+  if (e.target === document.getElementById("overlay")) closeModal();
+});
+
+// ── SAVE ──────────────────────────────────────────────────────────────
+
+document.getElementById("btnSave").addEventListener("click", async () => {
+  const title = document.getElementById("fTitle").value.trim();
+  if (!title) { document.getElementById("fTitle").focus(); return; }
+
+  const data = {
+    title,
+    caption: document.getElementById("fCaption").value.trim(),
+    platform: document.getElementById("fPlatform").value,
+    status: document.getElementById("fStatus").value,
+    scheduled_date: document.getElementById("fDate").value,
+    hashtags: document.getElementById("fHashtags").value.trim(),
+  };
+
+  const id = document.getElementById("editId").value;
+  try {
+    if (id) {
+      await fetch(`${API}/posts/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      showToast("Post updated!", "success");
+    } else {
+      await fetch(`${API}/posts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      showToast("Post created!", "success");
+    }
+  } catch {
+    // Demo mode: update local
+    if (id) {
+      const idx = allPosts.findIndex(p => p.id == id);
+      if (idx > -1) allPosts[idx] = { ...allPosts[idx], ...data };
+    } else {
+      allPosts.push({ id: Date.now(), ...data });
+    }
+    showToast(id ? "Post updated!" : "Post created!", "success");
+  }
+
+  closeModal();
+  await loadPosts();
+});
+
+// ── DELETE ─────────────────────────────────────────────────────────────
+
+async function deletePost(id) {
+  if (!confirm("Delete this post?")) return;
+  try {
+    await fetch(`${API}/posts/${id}`, { method: "DELETE" });
+  } catch {
+    allPosts = allPosts.filter(p => p.id != id);
+  }
+  await loadPosts();
+  showToast("Post deleted.");
+}
+
+// ── HASHTAG SUGGESTER ──────────────────────────────────────────────────
+
+document.getElementById("btnSuggest").addEventListener("click", async () => {
+  const topic = document.getElementById("fHashtagTopic").value.trim();
+  const platform = document.getElementById("fPlatform").value;
+  if (!topic) return;
+
+  let hashtags = [];
+  try {
+    const res = await fetch(`${API}/hashtags`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic, platform })
+    });
+    const data = await res.json();
+    hashtags = data.hashtags;
+  } catch {
+    // Fallback: client-side simple suggestions
+    hashtags = generateFallbackHashtags(topic, platform);
+  }
+
+  const preview = document.getElementById("hashtagPreview");
+  preview.innerHTML = hashtags.map(h =>
+    `<span class="htag-chip ${selectedHashtags.has(h) ? 'selected' : ''}" data-tag="${h}">${h}</span>`
+  ).join("");
+
+  preview.querySelectorAll(".htag-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      const tag = chip.dataset.tag;
+      if (selectedHashtags.has(tag)) {
+        selectedHashtags.delete(tag);
+        chip.classList.remove("selected");
+      } else {
+        selectedHashtags.add(tag);
+        chip.classList.add("selected");
+      }
+      document.getElementById("fHashtags").value = [...selectedHashtags].join(" ");
+    });
+  });
+});
+
+function generateFallbackHashtags(topic, platform) {
+  const base = topic.toLowerCase().replace(/\s+/g, "");
+  const words = topic.toLowerCase().split(/\s+/);
+  const tags = [`#${base}`, ...words.map(w => `#${w}`)];
+  const generic = {
+    instagram: ["#instagood", "#content", "#viral", "#reels", "#contentcreator"],
+    twitter: ["#trending", "#viral", "#content"],
+    linkedin: ["#linkedin", "#networking", "#growth"]
+  };
+  return [...new Set([...tags, ...(generic[platform] || generic.instagram)])].slice(0, 12);
+}
+
+// ── PLATFORM FILTER ────────────────────────────────────────────────────
+
+document.querySelectorAll(".filter-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentPlatform = btn.dataset.platform;
+    loadPosts();
+  });
+});
+
+// ── TOAST ──────────────────────────────────────────────────────────────
+
+function showToast(msg, type = "") {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────
+
+loadPosts();
+</script>
+</body>
+</html>
