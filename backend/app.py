@@ -7,8 +7,7 @@ from hashtag_engine import suggest_hashtags
 app = Flask(__name__)
 CORS(app)
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "database.db")
-
+DB_PATH = os.path.join("/tmp", "database.db")
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
