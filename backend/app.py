@@ -125,6 +125,9 @@ def get_hashtags():
     return jsonify({"hashtags": hashtags})
 
 
+# Initialize database on startup
+init_db()
+
 if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 5000))
